@@ -1,6 +1,6 @@
 import os
 
-LOAD_PATH = "C:/Папки/GitHub/Numbers_auto_AI/data/test"
+LOAD_PATH = "C:/Папки/GitHub/Numbers_auto_AI/data/test/labels"
 SAVE_FOLDER = "C:/Папки/GitHub/Numbers_auto_AI/data/new_test"
 
 class Image():
@@ -45,5 +45,6 @@ for file in os.listdir(LOAD_PATH):
     image = Image(label_path, new_label_path)
     image.save_image_with_frame_layout("")
 
+'''ФОТО НОВОЕ ДОЛЖНО СОЗДАВАТЬСЯ ПУТЕМ ВЫРЕЗАНИЯ СО СТАРОГО ФОТО НОМЕРНОЙ РАМКИ, КОТОРАЯ ПОЛУЧАЕТСЯ В РЕЗУЛЬТАТЕ КОДА.'''
 
 
