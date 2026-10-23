@@ -1,9 +1,18 @@
+import os
+
 LOAD_PATH = "ПУТЬ К ДАТАСЕТУ 1"
 SAVE_FOLDER = "ПУТЬ К НОВОМУ ДАТАСЕТУ"
 
 class Image():
-    '''РЕАЛИЗОВАТЬ ЗДЕСЬ ИМПОРТ .txt ИЗ ДАННЫХ К КАЖДОМУ ФОТО'''
-    pass
+
+    def __init__(self, image_path, label_path):
+        self.image_path = image_path
+        self.label_path = label_path
+
+    def save_image_with_frame_layout(self, text):
+        with open(self.label_path, "w") as file:
+            file.write(text)
+
 
 class Coordinates_of_Number():
 
@@ -21,15 +30,6 @@ class Coordinates_of_Number():
         y2 = int(self.y_center + self.height/2)
 
         return (x1,y1,x2,y2)
-
-    def save_image_with_frame_layout(self):
-        '''ДОПИСАТЬ СОХРАНЕНИЕ ИЗОБРАЖЕНИЯ С X1,X2,Y1,Y2'''
-        pass
-
-
-Det1 = Coordinates_of_Number(x_center = 100, y_center = 50, width = 10, height = 30)
-print(Det1.frame_layout())
-
 
 
 
