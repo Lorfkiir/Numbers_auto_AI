@@ -1,7 +1,7 @@
 import os
 
-LOAD_PATH = "C:/Папки/GitHub/Numbers_auto_AI/data/test/labels"
-SAVE_FOLDER = "C:/Папки/GitHub/Numbers_auto_AI/data/new_test"
+LABELS_LOAD_FOLDER = "C:/Папки/GitHub/Numbers_auto_AI/data/train/labels"
+LABELS_SAVE_FOLDER = "C:/Папки/GitHub/Numbers_auto_AI/data/train/new_labels"
 
 class Image():
 
@@ -38,13 +38,11 @@ class Coordinates_of_Number():
 
         return (type, x1, y1, x2, y2)
 
-for file in os.listdir(LOAD_PATH):
-    label_path = os.path.join(LOAD_PATH, file)
-    new_label_path = os.path.join(SAVE_FOLDER, file)
+for file in os.listdir(LABELS_LOAD_FOLDER):
+    label_path = os.path.join(LABELS_LOAD_FOLDER, file)
+    new_label_path = os.path.join(LABELS_SAVE_FOLDER, file)
 
     image = Image(label_path, new_label_path)
     image.save_image_with_frame_layout("")
-
-'''ФОТО НОВОЕ ДОЛЖНО СОЗДАВАТЬСЯ ПУТЕМ ВЫРЕЗАНИЯ СО СТАРОГО ФОТО НОМЕРНОЙ РАМКИ, КОТОРАЯ ПОЛУЧАЕТСЯ В РЕЗУЛЬТАТЕ КОДА.'''
 
 
