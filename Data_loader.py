@@ -6,6 +6,7 @@ import json
 import matplotlib.pyplot as plt
 
 from torchvision.datasets import ImageFolder
+from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, random_split
 from PIL import Image
 
@@ -42,12 +43,11 @@ class Car_plate_OCR_Dataset():
 
         return img, coord
 
-dataset = Car_plate_OCR_Dataset(PATH_TO_TEST)
-print(len(dataset))
+train_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST)
+valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID)
+test_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST)
 
-img, coord = dataset[7]
-print(f'Координаты центра номера: {coord}')
-plt.scatter(coord[0], coord[1], marker='x', color='white')
-plt.imshow(img, cmap='gray')
-plt.show()
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
