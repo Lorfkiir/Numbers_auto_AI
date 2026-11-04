@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torchvision
 import os
 import numpy as np
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from torchvision.datasets import ImageFolder
 from torchvision import transforms
+from torchvision.transforms import v2
 from torch.utils.data import Dataset, DataLoader, random_split
 from PIL import Image
 
@@ -35,19 +37,34 @@ class Car_plate_OCR_Dataset():
         name_file = self.list_name_file[index]
         path_img = os.path.join(self.path, name_file)
 
-        img = np.array(Image.open(path_img))
-        coord = np.array(self.dict_coords[name_file])
+        img = Image.open(path_img)
+        coord = torch.tensor(self.dict_coords[name_file], dtype=torch.float)
 
         if self.transform is not None:
             img = self.transform(img)
 
         return img, coord
 
-train_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST)
-valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID)
-test_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST)
+# Трансформация для передачи правильной разметки 640х640х3(RGB)
+
+transform = v2.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(
+            mean=(0.5, 0.5, 0.5),
+            std=(0.5, 0.5, 0.5)
+        )
+    ]
+)
+
+train_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST, transform=transform)
+valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID, transform=transform)
+test_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+
 
