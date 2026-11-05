@@ -6,11 +6,19 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
 from torchvision.transforms import v2
 from torch.utils.data import Dataset, DataLoader, random_split
 from PIL import Image
+from tqdm import tqdm
+
+plt.style.use('dark_background')
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+EPOCHS = 50
+train_loss = []
+train_acc = []
+val_loss = []
+val_acc = []
 
 PATH_TO_TRAIN = r'C:\Папки\GitHub\Numbers_auto_AI\data\train'
 PATH_TO_VALID = r'C:\Папки\GitHub\Numbers_auto_AI\data\val'
@@ -45,6 +53,20 @@ class Car_plate_OCR_Dataset():
 
         return img, coord
 
+class Model(nn.Module):
+    def __init__(self, input, output):
+        super().__init__()
+        self.layer_1 = nn.Linear(input, 128)
+        self.layer_2 = nn.Linear(128, output)
+        self.act = nn.ReLU()
+
+    def forward(self, x):
+        x = self.layer_1(x)
+        x = self.act(x)
+        out = self.layer_2(x)
+        return out
+
+
 # Трансформация для передачи правильной разметки 640х640х3(RGB)
 
 transform = v2.Compose(
@@ -58,13 +80,103 @@ transform = v2.Compose(
     ]
 )
 
-train_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST, transform=transform)
+train_dataset = Car_plate_OCR_Dataset(PATH_TO_TRAIN, transform=transform)
 valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID, transform=transform)
 test_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# Объявляем и указываем параметры нейронной сети
+
+OCR_Detection_NN = Model(3*640*640, 2).to(device)
+
+loss_regression = nn.MSELoss()
+opt_regression = torch.optim.Adam(OCR_Detection_NN.parameters(), lr = 0.001)
+
+
+# Цикл обучения нейронной сети
+
+for epoch in range(EPOCHS):
+
+    # Тренировка модели
+    OCR_Detection_NN.train()
+    running_train_loss = []
+    true_answers = 0
+    train_loop = tqdm(train_loader, leave=False)
+    for x, targets in train_loop:
+        # Данные
+        # (batch_size, 3, 640, 640) -> (batch_size, 3*640*640)
+        x = x.reshape(x.shape[0], -1).to(device)
+        targets = targets.to(device)
+
+        # Прямой проход и расчет ошибки модели
+        prediction = OCR_Detection_NN(x)
+        loss = loss_regression(prediction, targets)
+
+        # Обратный проход
+        opt_regression.zero_grad()
+        loss.backward()
+        # Шаг оптимизации
+        opt_regression.step()
+
+        running_train_loss.append(loss.item())
+        mean_train_loss = sum(running_train_loss) / len(running_train_loss)
+
+        true_answers += (torch.round(prediction) == targets).all(dim=1).sum().item()
+
+        train_loop.set_description(f"Epoch [{epoch+1}/{EPOCHS}], train loss: {mean_train_loss:.4f}")
+
+    # Расчет значения метрики
+    running_train_acc = true_answers / len(train_dataset)
+
+    # Сохранение значения функции потерь и метрики
+    train_loss.append(mean_train_loss)
+    train_acc.append(running_train_acc)
+
+    # Validation
+    OCR_Detection_NN.eval()
+    with torch.no_grad():
+        running_val_loss = []
+        true_answers = 0
+        for x, targets in valid_loader:
+            # Данные
+            # (batch_size, 3, 640, 640) -> (batch_size, 3*640*640)
+            x = x.reshape(x.shape[0], -1).to(device)
+            targets = targets.to(device)
+
+            # Прямой проход и расчет ошибки модели
+            prediction = OCR_Detection_NN(x)
+            loss = loss_regression(prediction, targets)
+
+            running_val_loss.append(loss.item())
+            mean_val_loss = sum(running_val_loss) / len(running_val_loss)
+
+            true_answers += (torch.round(prediction) == targets).all(dim=1).sum().item()
+
+        # Расчет значения метрики
+        running_val_acc = true_answers / len(valid_dataset)
+
+        # Сохранение значения функции потерь и метрики
+        val_loss.append(mean_val_loss)
+        val_acc.append(running_val_acc)
+
+        print(f"Epoch [{epoch+1}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}")
+
+plt.plot(train_loss)
+plt.plot(val_loss)
+plt.legend(['loss_train', 'loss_val'])
+plt.show()
+
+plt.plot(train_acc)
+plt.plot(val_acc)
+plt.legend(['acc_train', 'acc_val'])
+plt.show()
+
+
+
+
 
 
 
