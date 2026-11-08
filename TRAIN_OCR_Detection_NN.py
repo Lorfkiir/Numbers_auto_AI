@@ -7,7 +7,7 @@ import json
 import matplotlib.pyplot as plt
 
 from torchvision.transforms import v2
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader
 from PIL import Image
 from tqdm import tqdm
 
@@ -24,7 +24,6 @@ val_acc = []
 
 PATH_TO_TRAIN = r'C:\Папки\GitHub\Numbers_auto_AI\data\train'
 PATH_TO_VALID = r'C:\Папки\GitHub\Numbers_auto_AI\data\val'
-PATH_TO_TEST = r'C:\Папки\GitHub\Numbers_auto_AI\data\test'
 PATH_TO_SAVE_MODEL = r'C:\Папки\GitHub\Numbers_auto_AI\model'
 
 class Car_plate_OCR_Dataset():
@@ -139,11 +138,9 @@ transform = v2.Compose(
 
 train_dataset = Car_plate_OCR_Dataset(PATH_TO_TRAIN, transform=transform)
 valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID, transform=transform)
-test_dataset = Car_plate_OCR_Dataset(PATH_TO_TEST, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 # Объявляем и указываем параметры нейронной сети
 
