@@ -5,6 +5,7 @@ import os
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+from torch.optim import lr_scheduler
 
 from torchvision.transforms import v2
 from torch.utils.data import DataLoader
@@ -14,6 +15,10 @@ from tqdm import tqdm
 plt.style.use('dark_background')
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+PATH_TO_TRAIN_DATASET = r'C:\Папки\GitHub\Numbers_auto_AI\data\train'
+PATH_TO_VALID_DATASET = r'C:\Папки\GitHub\Numbers_auto_AI\data\val'
+PATH_TO_SAVE_MODEL = r'C:\Папки\GitHub\Numbers_auto_AI\model'
+
 BEST_LOSS_EPOCH = None
 COAF = 0.05
 EPOCHS = 50
@@ -21,10 +26,6 @@ train_loss = []
 train_acc = []
 val_loss = []
 val_acc = []
-
-PATH_TO_TRAIN = r'C:\Папки\GitHub\Numbers_auto_AI\data\train'
-PATH_TO_VALID = r'C:\Папки\GitHub\Numbers_auto_AI\data\val'
-PATH_TO_SAVE_MODEL = r'C:\Папки\GitHub\Numbers_auto_AI\model'
 
 class Car_plate_OCR_Dataset():
     def __init__(self, path, transform=None):
@@ -136,8 +137,8 @@ transform = v2.Compose(
     ]
 )
 
-train_dataset = Car_plate_OCR_Dataset(PATH_TO_TRAIN, transform=transform)
-valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID, transform=transform)
+train_dataset = Car_plate_OCR_Dataset(PATH_TO_TRAIN_DATASET, transform=transform)
+valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID_DATASET, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
@@ -149,7 +150,7 @@ early_stop = EarlyStopping(mode='min', patience=5)
 
 loss_regression = nn.MSELoss()
 opt_regression = torch.optim.Adam(OCR_Detection_NN.parameters(), lr = 0.001)
-
+lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_regression, mode='min', factor=0.1, patience=5, threshold=0.0001, threshold_mode='rel')
 
 # Цикл обучения нейронной сети
 
