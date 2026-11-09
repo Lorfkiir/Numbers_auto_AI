@@ -1,50 +1,20 @@
 import torch
 import torch.nn as nn
-import torchvision
-import os
-import numpy as np
-import json
 import matplotlib.pyplot as plt
-from torch.nn import Module
-from torch.optim import lr_scheduler
 
-from torchvision.transforms import v2
 from torch.utils.data import DataLoader
-from PIL import Image
 from tqdm import tqdm
 
-import OCR_Detection_NN_loader
+from Dataloader import train_dataset, valid_dataset, PATH_TO_SAVE_MODEL
+from Earlystop import EarlyStopping
+from Model import Model, str_info
 
 plt.style.use('dark_background')
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-PATH_TO_TRAIN_DATASET = r'C:\Папки\GitHub\Numbers_auto_AI\data\train'
-PATH_TO_VALID_DATASET = r'C:\Папки\GitHub\Numbers_auto_AI\data\val'
-PATH_TO_SAVE_MODEL = r'C:\Папки\GitHub\Numbers_auto_AI\model'
-
-str_info = '''
-class Model(nn.Module):
-    def __init__(self, input, output):
-        super().__init__()
-        self.layer_1 = nn.Linear(input, 128)
-        self.layer_2 = nn.Linear(128, 64)
-        self.layer_3 = nn.Linear(64, output)
-        self.act = nn.ReLU()
-
-    def forward(self, x):
-        x = self.layer_1(x)
-        x = self.act(x)
-        x = self.layer_2(x)
-        x = self.act(x)
-        out = self.layer_3(x)
-        return out
-        
-OCR_Detection_NN = Model(3*640*640, 8)
-'''
-
 COAF = 0.05
 EPOCHS = 50
-save_epoch = None
+save_epoch = 0
 train_loss = []
 train_acc = []
 val_loss = []
@@ -52,151 +22,16 @@ val_acc = []
 lr_list = []
 best_loss = None
 
-class Car_plate_OCR_Dataset():
-    def __init__(self, path, transform=None):
-        self.path = path
-        self.transform = transform
-
-        self.list_name_file = os.listdir(self.path)
-        if 'coords.json' in self.list_name_file:
-            self.list_name_file.remove('coords.json')
-
-        self.len_dataset = len(self.list_name_file)
-
-        with open(os.path.join(self.path, 'coords.json'), 'r') as f:
-            self.dict_coords = json.load(f)
-
-    def __len__(self):
-        return self.len_dataset
-
-    def __getitem__(self, index):
-        name_file = self.list_name_file[index]
-        path_img = os.path.join(self.path, name_file)
-
-        img = Image.open(path_img)
-        coord = torch.tensor(self.dict_coords[name_file], dtype=torch.float)
-
-        if self.transform is not None:
-            img = self.transform(img)
-
-        return img, coord
-
-class Model(nn.Module):
-    def __init__(self, input, output):
-        super().__init__()
-        self.layer_1 = nn.Linear(input, 128)
-        self.layer_2 = nn.Linear(128, 64)
-        self.layer_3 = nn.Linear(64, output)
-        self.act = nn.ReLU()
-
-    def forward(self, x):
-        x = self.layer_1(x)
-        x = self.act(x)
-        x = self.layer_2(x)
-        x = self.act(x)
-        out = self.layer_3(x)
-        return out
-
-class EarlyStopping():
-    def __init__(self, mode='min', patience=10, threshold=0.0001, threshold_mode='rel'):
-        if mode not in {'min', 'max'}:
-            raise ValueError('Параметр mode может принимать только значения min и max')
-        if threshold_mode not in {'rel', 'abs'}:
-            raise ValueError('Параметр threshold_mode может принимать только значения rel и abs')
-        if not isinstance(patience, int):
-            raise TypeError('Параметр patience должен быть целым числом')
-        if not isinstance(threshold, float):
-            raise TypeError('Параметр threshold должен быть типа float и меньше 1.0')
-        if threshold >= 1.0:
-            raise ValueError('Параметр threshold должен быть меньше 1.0')
-
-
-        self.mode = mode
-        self.patience = patience
-        self.threshold = threshold
-        self.threshold_mode = threshold_mode
-        self.count = 0
-        self.best = None
-
-    def __call__(self, tracked_parametr):
-        current = float(tracked_parametr)
-        if self.best is None:
-            self.best = current
-            return False
-
-        if self.changed_better(current, self.best):
-            self.best = current
-            self.count = 0
-        else:
-            self.count += 1
-
-        if self.count >= self.patience:
-            self.count = 0
-            return True
-
-        return False
-
-    def changed_better(self, current, best):
-        if self.mode == 'min' and self.threshold_mode == 'rel':
-            return current < best - best * self.threshold
-
-        elif self.mode == 'min' and self.threshold_mode == 'abs':
-            return current < best - self.threshold
-
-        elif self.mode == 'max' and self.threshold_mode == 'rel':
-            return current > best + best * self.threshold
-        else:
-            return current > best + self.threshold
-
-
-# Трансформация для передачи правильной разметки 640х640х3(RGB)
-
-transform = v2.Compose(
-    [
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize(
-            mean=(0.5, 0.5, 0.5),
-            std=(0.5, 0.5, 0.5)
-        )
-    ]
-)
-
-train_dataset = Car_plate_OCR_Dataset(PATH_TO_TRAIN_DATASET, transform=transform)
-valid_dataset = Car_plate_OCR_Dataset(PATH_TO_VALID_DATASET, transform=transform)
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-valid_loader = DataLoader(valid_dataset, batch_size=64, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False)
 
 # Объявляем и указываем параметры нейронной сети
-
-OCR_Detection_NN = Model(3*640*640, 8).to(device)
-early_stop = EarlyStopping(mode='min', patience=5)
+OCR_Detection_NN = Model(8).to(device)
+early_stop = EarlyStopping(mode='min', patience=10)
 
 loss_regression = nn.MSELoss()
-opt_regression = torch.optim.Adam(OCR_Detection_NN.parameters(), lr = 0.001)
-lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_regression, mode='min', factor=0.1, patience=5)
-
-checkpoint = {
-    'info': str_info,
-    'state_model': OCR_Detection_NN.state_dict(),
-    'state_opt': opt_regression.state_dict(),
-    'state_lr_scheduler': lr_scheduler.state_dict(),
-    'loss': {
-        'train_loss': train_loss,
-        'val_loss': val_loss,
-        'best_loss': best_loss
-    },
-    'metric': {
-        'train_acc': train_acc,
-        'val_acc': val_acc,
-    },
-    'lr': lr_list,
-    'epoch': {
-        'EPOCH': EPOCHS,
-        'save_epoch': save_epoch
-    }
-}
+opt = torch.optim.Adam(OCR_Detection_NN.parameters(), lr = 0.001)
+lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=2, threshold=0.005, cooldown=1)
 
 # Цикл обучения нейронной сети
 
@@ -208,9 +43,7 @@ for epoch in range(EPOCHS):
     true_answers = 0
     train_loop = tqdm(train_loader, leave=False)
     for x, targets in train_loop:
-        # Данные
-        # (batch_size, 3, 640, 640) -> (batch_size, 3*640*640)
-        x = x.reshape(x.shape[0], -1).to(device)
+        x = x.to(device)
         targets = targets.to(device)
 
         # Прямой проход и расчет ошибки модели
@@ -218,10 +51,10 @@ for epoch in range(EPOCHS):
         loss = loss_regression(prediction, targets)
 
         # Обратный проход
-        opt_regression.zero_grad()
+        opt.zero_grad()
         loss.backward()
         # Шаг оптимизации
-        opt_regression.step()
+        opt.step()
 
         running_train_loss.append(loss.item())
         mean_train_loss = sum(running_train_loss) / len(running_train_loss)
@@ -243,12 +76,9 @@ for epoch in range(EPOCHS):
         running_val_loss = []
         true_answers = 0
         for x, targets in valid_loader:
-            # Данные
-            # (batch_size, 3, 640, 640) -> (batch_size, 3*640*640)
-            x = x.reshape(x.shape[0], -1).to(device)
+            x = x.to(device)
             targets = targets.to(device)
 
-            # Прямой проход и расчет ошибки модели
             prediction = OCR_Detection_NN(x)
             loss = loss_regression(prediction, targets)
 
@@ -270,10 +100,37 @@ for epoch in range(EPOCHS):
         if mean_val_loss < best_loss - best_loss * COAF :
             best_loss = mean_val_loss
 
-            torch.save(OCR_Detection_NN.state_dict(), f'{PATH_TO_SAVE_MODEL}\\OCR_Detection_NN_{epoch+1}.pt')
+            save_epoch += 1
+            checkpoint = {
+                'info': str_info,
+                'state_model': OCR_Detection_NN.state_dict(),
+                'state_opt': opt.state_dict(),
+                'state_lr_scheduler': lr_scheduler.state_dict(),
+
+                'loss': {
+                    'train_loss': train_loss,
+                    'val_loss': val_loss,
+                    'best_loss': best_loss
+                },
+
+                'metric': {
+                    'train_acc': train_acc,
+                    'val_acc': val_acc,
+                },
+
+                'lr': lr_list,
+
+                'epoch': {
+                    'EPOCH': EPOCHS,
+                    'save_epoch': save_epoch
+                }
+            }
+
+            torch.save(checkpoint, f"{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_{save_epoch}.pt")
+
             print(f"Модель с эпохой - {epoch+1}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.", end='\n\n')
 
-        if early_stop(mean_val_loss):
+        if EarlyStopping(mean_val_loss):
             print(f"\033[31mОбучение остановлено на {epoch+1} эпохе. \033[0m")
             break
 

@@ -1,2 +1,3 @@
 '''
-Make resizer for image from ESP_CAM to 640x640px'''
+Make resizer for image from ESP_CAM to 640x640px
+'''
