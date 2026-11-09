@@ -128,17 +128,17 @@ for epoch in range(EPOCHS):
 
             torch.save(checkpoint, f"{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_{save_epoch}.pt")
 
-            print(f"Модель с эпохой - {epoch+1}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.", end='\n\n')
+            print(f"Модель с эпохой - {epoch}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.", end='\n\n')
 
         if EarlyStopping(mean_val_loss):
-            print(f"\033[31mОбучение остановлено на {epoch+1} эпохе. \033[0m")
+            print(f"\033[31mОбучение остановлено на {epoch} эпохе. \033[0m")
             break
 
     lr_scheduler.step(mean_val_loss)
     lr = lr_scheduler._last_lr[0]
     lr_list.append(lr)
 
-    print(f"Epoch [{epoch + 1}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
+    print(f"Epoch [{epoch}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
 
 plt.plot(train_loss)
 plt.plot(val_loss)
