@@ -2,18 +2,19 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from Dataloader import train_dataset, valid_dataset, PATH_TO_SAVE_MODEL
+from Dataloader import train_dataset, valid_dataset, train_loader, valid_loader, PATH_TO_SAVE_MODEL
 from Earlystop import EarlyStopping
-from Model import Model, str_info
+from Model import Model, OCR_str_info
 
 plt.style.use('dark_background')
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-COAF = 0.05
-EPOCHS = 50
+print("Введите кол-во эпох и коэффициент значимости улучшения (по умолчанию = 0.001)")
+
+COAF = float(input())
+EPOCHS = int(input())
 save_epoch = 0
 train_loss = []
 train_acc = []
@@ -22,16 +23,16 @@ val_acc = []
 lr_list = []
 best_loss = None
 
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False)
-
 # Объявляем и указываем параметры нейронной сети
 OCR_Detection_NN = Model(8).to(device)
 early_stop = EarlyStopping(mode='min', patience=10)
 
 loss_regression = nn.MSELoss()
-opt = torch.optim.Adam(OCR_Detection_NN.parameters(), lr = 0.001)
-lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=2, threshold=0.005, cooldown=1)
+opt = torch.optim.Adam(OCR_Detection_NN.parameters(), lr=0.001)
+lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=2, threshold=0.005,
+                                                          cooldown=1)
+
+print(f"Начало обучения с кол-вом эпох - {EPOCHS}...")
 
 # Цикл обучения нейронной сети
 
@@ -40,6 +41,7 @@ for epoch in range(EPOCHS):
     # Тренировка модели
     OCR_Detection_NN.train()
     running_train_loss = []
+    cnt = 0
     true_answers = 0
     train_loop = tqdm(train_loader, leave=False)
     for x, targets in train_loop:
@@ -61,7 +63,7 @@ for epoch in range(EPOCHS):
 
         true_answers += (torch.abs(prediction - targets) <= 10).all(dim=1).sum().item()
 
-        train_loop.set_description(f"Epoch [{epoch+1}/{EPOCHS}], train_loss={mean_train_loss:.4f}")
+        train_loop.set_description(f"Epoch [{epoch + 1}/{EPOCHS}], train_loss={mean_train_loss:.4f}")
 
     # Расчет значения метрики
     running_train_acc = true_answers / len(train_dataset)
@@ -97,12 +99,12 @@ for epoch in range(EPOCHS):
         if best_loss is None:
             best_loss = mean_val_loss
 
-        if mean_val_loss < best_loss - best_loss * COAF :
+        if mean_val_loss < best_loss - best_loss * COAF:
             best_loss = mean_val_loss
 
             save_epoch += 1
             checkpoint = {
-                'info': str_info,
+                'info': OCR_str_info,
                 'state_model': OCR_Detection_NN.state_dict(),
                 'state_opt': opt.state_dict(),
                 'state_lr_scheduler': lr_scheduler.state_dict(),
@@ -128,9 +130,11 @@ for epoch in range(EPOCHS):
 
             torch.save(checkpoint, f"{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_{save_epoch}.pt")
 
-            print(f"Модель с эпохой - {epoch}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.", end='\n\n')
+            print(
+                f"Модель с эпохой - {epoch}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.",
+                end='\n\n')
 
-        if EarlyStopping(mean_val_loss):
+        if early_stop(mean_val_loss):
             print(f"\033[31mОбучение остановлено на {epoch} эпохе. \033[0m")
             break
 
@@ -138,7 +142,8 @@ for epoch in range(EPOCHS):
     lr = lr_scheduler._last_lr[0]
     lr_list.append(lr)
 
-    print(f"Epoch [{epoch}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
+    print(
+        f"Epoch [{epoch}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
 
 plt.plot(train_loss)
 plt.plot(val_loss)
@@ -149,9 +154,3 @@ plt.plot(train_acc)
 plt.plot(val_acc)
 plt.legend(['acc_train', 'acc_val'])
 plt.show()
-
-
-
-
-
-

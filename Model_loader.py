@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from Dataloader import test_dataset, PATH_TO_SAVE_MODEL, train_dataset, valid_dataset
-from Model import Model, str_info
+from Dataloader import test_dataset, test_loader, train_dataset, train_loader, valid_dataset, valid_loader, \
+    PATH_TO_SAVE_MODEL, PATH_TO_TEST_DATASET
+from Model import Model, OCR_str_info
 from Earlystop import EarlyStopping
 from PIL import Image, ImageDraw
 from torchvision import transforms
@@ -15,16 +15,15 @@ from torchvision import transforms
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 plt.style.use('dark_background')
 
-TEST_PATH = r'C:\Папки\GitHub\Numbers_auto_AI\data\test'
-
 COAF = 0.05
 
 Model = Model(8).to(device)
-Model_state = torch.load(f'{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_3.pt')
+Model_state = torch.load(f'{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_26.pt')
 
 loss_regression = nn.MSELoss()
 opt = torch.optim.Adam(Model.parameters(), lr=0.001)
 lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt)
+early_stop = EarlyStopping()
 
 Model.load_state_dict(Model_state['state_model'])
 opt.load_state_dict(Model_state['state_opt'])
@@ -39,12 +38,8 @@ variable = int(input())
 
 if variable == 1:
 
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=4, shuffle=False)
-
     print("Вы выбрали дообучение модели")
     print("Введите общее кол-во эпох:")
-
     EPOCHS = int(input())
 
     save_epoch = Model_state['epoch']['save_epoch']
@@ -54,6 +49,8 @@ if variable == 1:
     val_acc = Model_state['metric']['val_acc']
     lr_list = Model_state['lr']
     best_loss = Model_state['loss']['best_loss']
+
+    print(f"Начало обучения с кол-вом эпох - {EPOCHS}...")
 
     for epoch in range(save_epoch, EPOCHS):
 
@@ -81,7 +78,7 @@ if variable == 1:
 
             true_answers += (torch.abs(prediction - targets) <= 10).all(dim=1).sum().item()
 
-            train_loop.set_description(f"Epoch [{epoch+1}/{EPOCHS}], train_loss={mean_train_loss:.4f}")
+            train_loop.set_description(f"Epoch [{epoch + 1}/{EPOCHS}], train_loss={mean_train_loss:.4f}")
 
         # Расчет значения метрики
         running_train_acc = true_answers / len(train_dataset)
@@ -117,12 +114,12 @@ if variable == 1:
             if best_loss is None:
                 best_loss = mean_val_loss
 
-            if mean_val_loss < best_loss - best_loss * COAF :
+            if mean_val_loss < best_loss - best_loss * COAF:
                 best_loss = mean_val_loss
 
-                save_epoch += 1
+                save_epoch = epoch + 1
                 checkpoint = {
-                    'info': str_info,
+                    'info': OCR_str_info,
                     'state_model': Model.state_dict(),
                     'state_opt': opt.state_dict(),
                     'state_lr_scheduler': lr_scheduler.state_dict(),
@@ -148,9 +145,12 @@ if variable == 1:
 
                 torch.save(checkpoint, f"{PATH_TO_SAVE_MODEL}\\Dict_OCR_Detection_NN_{save_epoch}.pt")
 
-                print(f"Модель с эпохой - {epoch}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.", end='\n\n')
+                print(
+                    f"Модель с эпохой - {epoch}, со значением функции потерь на валидации - {mean_val_loss:.4f} сохранена.",
+                    end='\n\n')
 
-            if EarlyStopping(mean_val_loss):
+            if early_stop(mean_val_loss):
+                torch.save(Model.state_dict(), f'OCR_Detection_NN.pt')
                 print(f"\033[31mОбучение остановлено на {epoch} эпохе. \033[0m")
                 break
 
@@ -158,7 +158,8 @@ if variable == 1:
         lr = lr_scheduler._last_lr[0]
         lr_list.append(lr)
 
-        print(f"Epoch [{epoch}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
+        print(
+            f"Epoch [{epoch}/{EPOCHS}], train_loss = {mean_train_loss:.4f}, train_acc = {running_train_acc:.4f}, val_loss = {mean_val_loss:.4f}, val_acc = {running_val_acc:.4f}, lr={lr:.4f}")
 
     plt.plot(train_loss)
     plt.plot(val_loss)
@@ -171,8 +172,6 @@ if variable == 1:
     plt.show()
 
 if variable == 2:
-
-    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
 
     print("Вы выбрали тестирование модели")
 
@@ -201,12 +200,11 @@ if variable == 2:
 
     print(f"Test Loss = {mean_test_loss:.4f}, Accuracy = {test_acc:.4f}.")
 
-
 if variable == 3:
 
     # Получаем список фотографий
     image_files = [
-        file for file in os.listdir(TEST_PATH)
+        file for file in os.listdir(PATH_TO_TEST_DATASET)
         if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))
     ]
 
@@ -228,7 +226,7 @@ if variable == 3:
 
     while True:
 
-        image_path = os.path.join(TEST_PATH, image_files[index])
+        image_path = os.path.join(PATH_TO_TEST_DATASET, image_files[index])
 
         # Загружаем фотографию
         image = Image.open(image_path).convert("RGB")
@@ -281,3 +279,6 @@ if variable == 3:
             print("Неизвестная команда!")
 
     print("Просмотр завершён.")
+
+if variable == 4:
+    torch.save(Model.state_dict(), f"{PATH_TO_SAVE_MODEL}\\OCR_Detection_NN_.pt")
