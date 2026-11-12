@@ -118,9 +118,3 @@ python -m scripts.crop_images
 
 Для обрезки по умолчанию используются `data/to_crop`, `data/cropped` и веса `models/checkpoints/OCR_Detection_NN.pt`. Пути можно переопределить через `CROP_INPUT_DIR`, `CROP_OUTPUT_DIR` и `OCR_WEIGHTS`.
 
-## Важные замечания
-
-- Датасеты и файлы весов в исходном архиве отсутствовали. Поэтому проверить фактическое обучение и загрузку checkpoint на реальных данных невозможно.
-- В `model_manager.py` для OCR и REC используются разные checkpoint-файлы: `Dict_OCR_Detection_NN_5.pt` и `Dict_REC_Detection_NN_5.pt`. Если у вас сохранены файлы с другими номерами эпох, измените константы `OCR_CHECKPOINT` и `REC_CHECKPOINT` в начале этого файла.
-- Формат checkpoint сохранён совместимым с исходным кодом.
-- `Recognized_NN.py` был пустым и удалён.
