@@ -39,8 +39,11 @@ class Car_plate_OCR_Dataset():
         name_file = self.list_name_file[index]
         path_img = os.path.join(self.path, name_file)
 
-        img = Image.open(path_img)
+        img = Image.open(path_img).convert('RGB')
+        h, w = img.size
         coord = torch.tensor(self.dict_coords[name_file], dtype=torch.float)
+        coord[0::2] /= w
+        coord[1::2] /= h
 
         if self.transform is not None:
             img = self.transform(img)

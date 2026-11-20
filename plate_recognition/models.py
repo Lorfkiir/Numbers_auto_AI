@@ -1,7 +1,7 @@
 """Архитектуры OCR (поиск номера) и REC (распознавание символов)."""
 import torch.nn as nn
 
-class Model(nn.Module):
+class OCR_Model(nn.Module):
     def __init__(self, out_channels):
         super().__init__()
         self.conv_1 = nn.Conv2d(3, 32, (3, 3), stride=2, padding=1)
@@ -17,6 +17,7 @@ class Model(nn.Module):
         self.bn_4 = nn.BatchNorm2d(192)
         self.bn_5 = nn.BatchNorm2d(256)
         self.act = nn.ReLU()
+        self.finish_act = nn.Sigmoid()
 
         self.layer_1 = nn.Linear(256 * 20 * 20, 512)
         self.layer_2 = nn.Linear(512, 128)
@@ -46,11 +47,11 @@ class Model(nn.Module):
         x = self.layer_2(x)
         x = self.act(x)
         out = self.layer_3(x)
+        finish = self.finish_act(out)
+        return finish
 
-        return out
 
-
-class Rec_Model(nn.Module):
+class REC_Model(nn.Module):
     def __init__(self, out_channels):
         super().__init__()
         self.conv_1 = nn.Conv2d(3, 32, (3, 3))

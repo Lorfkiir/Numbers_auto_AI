@@ -23,7 +23,7 @@ from plate_recognition.data import (
 
 from plate_recognition.models import (
     Model as OCR_Model,
-    Rec_Model,
+    REC_Model,
     OCR_str_info,
     REC_str_info
 )
@@ -653,7 +653,7 @@ def main():
 
     elif var_m == 2:
 
-        Model_1 = Rec_Model(9 * 22).to(device)
+        Model_1 = REC_Model(9 * 22).to(device)
 
         Model_1, Model_state, opt, lr_scheduler = load_model(
             Model_1,

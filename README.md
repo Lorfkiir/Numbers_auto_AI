@@ -116,5 +116,4 @@ python -m scripts.model_manager
 python -m scripts.crop_images
 ```
 
-Для обрезки по умолчанию используются `data/to_crop`, `data/cropped` и веса `models/checkpoints/OCR_Detection_NN.pt`. Пути можно переопределить через `CROP_INPUT_DIR`, `CROP_OUTPUT_DIR` и `OCR_WEIGHTS`.
 

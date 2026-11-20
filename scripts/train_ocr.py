@@ -8,7 +8,7 @@ def main():
 
     from plate_recognition.data import OCR_train_dataset, OCR_valid_dataset, OCR_train_loader, OCR_valid_loader, PATH_TO_SAVE_MODEL
     from plate_recognition.early_stopping import EarlyStopping
-    from plate_recognition.models import Model, OCR_str_info
+    from plate_recognition.models import OCR_Model, OCR_str_info
 
     plt.style.use('dark_background')
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -26,7 +26,7 @@ def main():
     best_loss = None
 
     # Объявляем и указываем параметры нейронной сети
-    OCR_Detection_NN = Model(8).to(device)
+    OCR_Detection_NN = OCR_Model(8).to(device)
     early_stop = EarlyStopping(mode='min', patience=10)
 
     loss_regression = nn.SmoothL1Loss()

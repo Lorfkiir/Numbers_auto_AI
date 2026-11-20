@@ -14,7 +14,7 @@ from plate_recognition.data import (
 )
 
 from plate_recognition.early_stopping import EarlyStopping
-from plate_recognition.models import Rec_Model, REC_str_info
+from plate_recognition.models import REC_Model, REC_str_info
 
 
 # ==================================================
@@ -99,7 +99,7 @@ def main():
     # МОДЕЛЬ И ОПТИМИЗАТОР
     # ==================================================
 
-    model = Rec_Model(9 * 22).to(device)
+    model = REC_Model(9 * 22).to(device)
 
     early_stop = EarlyStopping(
         mode='min',
